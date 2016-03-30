@@ -4,12 +4,18 @@
 #include "msp430.h"
 //interrupt handler on P3
 	//this is where the watch will send the data
+#define OFF  0
+#define ON  1
+
+int bulbState;
+
 enum  Input_Type
     { 
-      up_buttton, 
+      up_button, 
       select_button, 
       down_button, 
     };
+
 
 //P1.2 will be the output to IR transmitter
 
@@ -17,10 +23,56 @@ enum  Input_Type
 //*this will be the hardest part of this code -->> use timer(?) to get 38kHz frequency for sending IR signals 
 //send pulses consistent with observed data (address ~address data ~data)
 	//on will look like 0000 0000 1111 1111 1110 0000 0001 1111
+	// off = {0,0,0,0, 0,0,0,0, 1,1,1,1, 1,1,1,1, 0,1,1,0, 0,0,0,0, 1,0,0,1, 1,1,1,1};
 
 // ATTEMPT 3: FOR LOOP
 
+char output[] = {0,0,0,0, 0,0,0,0, 1,1,1,1, 1,1,1,1, 1,1,1,0, 0,0,0,0, 0,0,0,1, 1,1,1,1, 1};
+
+void sendData(){    
+	if(bulbState == OFF){
+		output[16] = 0;
+		output[24] = 1;
+		bulbState = ON;
+	}
+	else{
+		output[16] = 1;
+		output[24] = 0;
+		bulbState = OFF;
+	}
+
+    int i;
+    //Send a leader code for 9ms followed by 4.5 ms pause
+	    P1SEL |= BIT2; // connect output bit to timer
+		P1OUT = BIT3;	// make sure interrupt bit is still pulled high
+		//P1OUT = BIT2 | BIT3;
+		__delay_cycles(106000); //wait 9 ms
+		P1SEL &= ~BIT2;	// disconnect output from timer
+		//P1OUT = BIT3;
+		__delay_cycles(54000); //wait 4.5ms
+
+    for(i=0; i<33; i++){
+    	P1SEL |= BIT2; // connect output bit to timer
+		P1OUT = BIT3;	// make sure interrupt bit is still pulled high
+		__delay_cycles(6400); //wait 22 pulses, want 578Us in between start and end
+								//times 16 because we changed the clock cycle => 578 * 16 = 9248 too high
+								//500 * 16 = 8000 too high
+								//450 * 16 = 7200 ->660Us
+								//400 * 16 = 6400 ->600Us
+		P1SEL &= ~BIT2;	// disconnect output from timer
+		if(output[i]==0){
+			//__delay_cycles(14000); //wait a length of time dependent on the value being passed
+			__delay_cycles(7000);						//want 1125 ...or 520???
+		}
+		else{
+			// __delay_cycles(27000); //want x ...or 1700????
+			__delay_cycles(20500);
+		}
+    }
+}
+
 //ATTEMPT 2: FUNCTION CALLS
+    /*
 void sendOne(){
 	P1SEL &= ~BIT2;
 	P1OUT = BIT3;
@@ -58,7 +110,7 @@ void sendData(){
 	sendOne();sendOne();sendOne();sendOne();
 
 }
-
+*/
 
 /*
 ///ATTEMPT 1; HARDCODE IT
@@ -237,6 +289,7 @@ void sendData(){
 */
 void main(void)
 	{
+	 bulbState = OFF;
 	WDTCTL = WDTPW + WDTHOLD; // Stop WDT
 	P1DIR |= (BIT2 | BIT0); // P1.2 to output
 	P1SEL = 0; // We don't want the timer to change anything until we start sending data
@@ -264,12 +317,12 @@ void main(void)
 #pragma vector=PORT1_VECTOR
 __interrupt void PORT1_ISR(void)
 { 
-   
+  
   sendData();
-  sendData();
-  sendData();
-  sendData();
-  sendData();
+  // sendData();
+  // sendData();
+  // sendData();
+  // sendData();
 
   P1IFG &= ~BIT3;
 }
