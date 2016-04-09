@@ -12,10 +12,11 @@
 
 #define 	OFF  				0
 #define		ON  				1
-#define		RED 				2
-#define		GREEN 				3
-#define		BLUE 				4
-#define		WHITE 				5
+#define		WHITE  				2
+#define		FLASH  				3
+#define		STROBE  			4
+#define		FADE  				5
+#define		SMOOTH  			6
 
 int bulbState;
 
@@ -28,15 +29,7 @@ int bulbState;
 
 // ATTEMPT 3: FOR LOOP
 
-char output[] = {0,0,0,0, 0,0,0,0, 1,1,1,1, 1,1,1,1, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1};
-char on[] = {1,1,1,0, 0,0,0,0, 0,0,0,1, 1,1,1,1};
-char off[] = {0,1,1,0, 0,0,0,0, 1,0,0,1, 1,1,1,1};
-char red[] = {1,0,0,1, 0,0,0,0, 0,1,1,0, 1,1,1,1, 0};
-char green[] = {0,0,0,1, 0,0,0,0, 1,1,1,0, 1,1,1,1, 0};
-char blue[] = {0,1,0,1, 0,0,0,0, 1,0,1,0, 1,1,1,1, 0};
-char white[] = {1,1,0,1, 0,0,0,0, 0,0,1,0, 1,1,1,1, 0};
-
-
+char output[32] = {0,0,0,0, 0,0,0,0, 1,1,1,1, 1,1,1,1, 1,1,1,0, 0,0,0,0, 0,0,0,1, 1,1,1,1, 1};
 //START, VERSION, 4x FLAG, 2x PROFILE, CHECKSUM, END
 // uint8_t helloPebble[] = {0x7E, 0x01, 0x00, 0x00, 0x00, 0x00,0x02,0x00,0xff,0x7e};
 
@@ -101,66 +94,71 @@ char white[] = {1,1,0,1, 0,0,0,0, 0,0,1,0, 1,1,1,1, 0};
 // 		__delay_cycles(2480);	//send this separator between bytes 2300 seemed to work before...
 // 	 }
 // }
-void updateOutput(char* newVals){
-	int i;
-	for(i=0; i<16; i++){
-		output[i+16] = newVals[i];
-	}
-}
 
 void setOutput(){
 	switch(bulbState) {
 		case OFF :
-			updateOutput(on);
+			output[16] = 0;
+			output[24] = 1;
 			bulbState = ON;
 			break;
 	
 		case ON :
-			updateOutput(red);
-			bulbState = RED;
-			break;
-
-		case RED :
-			updateOutput(green);
-			bulbState = GREEN;
-			break;
-
-		case GREEN :
-			updateOutput(blue);
-			bulbState = BLUE;
-			break;
-
-		case BLUE :
-			updateOutput(white);
+			output[16] = 0;
+			output[24] = 1;
+			output[19] = 1;
+			output[27] = 0;
 			bulbState = WHITE;
 			break;
 
 		case WHITE :
-			updateOutput(off);
+			output[18] = 1;
+			output[26] = 0;
+			bulbState = FLASH;
+			break;
+
+		case FLASH :
+			output[19] = 0;
+			output[27] = 1;
+			output[20] = 1;
+			output[28] = 0;			
+			bulbState = STROBE;
+			break;
+
+		case STROBE :
+			output[18] = 0;
+			output[26] = 1;
+			output[19] = 1;
+			output[27] = 0;
+			bulbState = FADE;
+			break;
+
+		case FADE :
+			output[19] = 0;
+			output[27] = 1;
+			bulbState = SMOOTH;
+			break;
+
+		case SMOOTH :
+			output[16] = 0;
+			output[24] = 1;			
+			output[18] = 1;
+			output[26] = 0;
+			output[20] = 0;
+			output[28] = 1;
 			bulbState = OFF;
 			break;
 
 		default :
-			updateOutput(on);
-			bulbState = ON;
 			break;
 		
 	}
 }
 
 void sendIRData(){    
-	// if(bulbState == OFF){
-	// 	output[16] = 0;
-	// 	output[24] = 1;
-	// 	bulbState = ON;
-	// }
-	// else{
-	// 	output[16] = 1;
-	// 	output[24] = 0;
-	// 	bulbState = OFF;
-	// }
-	//P1OUT ^= BIT6;
 	setOutput();
+	//P1OUT ^= BIT6;
+	//setOutput();
     int i;
     //Send a leader code for 9ms followed by 4.5 ms pause
 	    P1SEL |= IROUT; // connect output bit to timer
@@ -408,8 +406,7 @@ void sendData(){
 }
 */
 // >>>>>>> parent of 241f66c... ON/OFF WORKgit add -Agit add -A Using p3 button
-void main(void)
-	{
+void main(void) {
 	WDTCTL = WDTPW + WDTHOLD; // Stop WDT
 	P1DIR |= (IROUT | TXD); // P1.2 to output
 	P1SEL = 0; // We don't want the timer to change anything until we start sending data
@@ -426,6 +423,9 @@ void main(void)
 	TA0CCR1 = 210; // CCR1 PWM duty cycle should be half the period
 	TA0CTL = TASSEL_2 + MC_1; // SMCLK, up mode
 
+	//output = {0,0,0,0, 0,0,0,0, 1,1,1,1, 1,1,1,1, 0,1,1,0, 0,0,0,0, 1,0,0,1, 1,1,1,1, 1};
+	bulbState = ON;
+	sendIRData();
 	_BIS_SR (LPM4_bits + GIE); //Turn on interrupts and go into the lowest power mode
 	
 }

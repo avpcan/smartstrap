@@ -12,10 +12,6 @@
 
 #define 	OFF  				0
 #define		ON  				1
-#define		RED 				2
-#define		GREEN 				3
-#define		BLUE 				4
-#define		WHITE 				5
 
 int bulbState;
 
@@ -28,15 +24,7 @@ int bulbState;
 
 // ATTEMPT 3: FOR LOOP
 
-char output[] = {0,0,0,0, 0,0,0,0, 1,1,1,1, 1,1,1,1, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1};
-char on[] = {1,1,1,0, 0,0,0,0, 0,0,0,1, 1,1,1,1};
-char off[] = {0,1,1,0, 0,0,0,0, 1,0,0,1, 1,1,1,1};
-char red[] = {1,0,0,1, 0,0,0,0, 0,1,1,0, 1,1,1,1, 0};
-char green[] = {0,0,0,1, 0,0,0,0, 1,1,1,0, 1,1,1,1, 0};
-char blue[] = {0,1,0,1, 0,0,0,0, 1,0,1,0, 1,1,1,1, 0};
-char white[] = {1,1,0,1, 0,0,0,0, 0,0,1,0, 1,1,1,1, 0};
-
-
+char output[] = {0,0,0,0, 0,0,0,0, 1,1,1,1, 1,1,1,1, 1,1,1,0, 0,0,0,0, 0,0,0,1, 1,1,1,1, 1};
 //START, VERSION, 4x FLAG, 2x PROFILE, CHECKSUM, END
 // uint8_t helloPebble[] = {0x7E, 0x01, 0x00, 0x00, 0x00, 0x00,0x02,0x00,0xff,0x7e};
 
@@ -101,66 +89,42 @@ char white[] = {1,1,0,1, 0,0,0,0, 0,0,1,0, 1,1,1,1, 0};
 // 		__delay_cycles(2480);	//send this separator between bytes 2300 seemed to work before...
 // 	 }
 // }
-void updateOutput(char* newVals){
-	int i;
-	for(i=0; i<16; i++){
-		output[i+16] = newVals[i];
-	}
-}
 
-void setOutput(){
-	switch(bulbState) {
-		case OFF :
-			updateOutput(on);
-			bulbState = ON;
-			break;
+// void setOutput(){
+// 	switch(bulbState) {
+// 		case OFF :
+// 			output[16] = 0;
+// 			output[24] = 1;
+// 			bulbState = ON;
+// 			break;
 	
-		case ON :
-			updateOutput(red);
-			bulbState = RED;
-			break;
+// 		case ON :
+// 			output[16] = 1;
+// 			output[24] = 0;
+// 			bulbState = OFF;
 
-		case RED :
-			updateOutput(green);
-			bulbState = GREEN;
-			break;
-
-		case GREEN :
-			updateOutput(blue);
-			bulbState = BLUE;
-			break;
-
-		case BLUE :
-			updateOutput(white);
-			bulbState = WHITE;
-			break;
-
-		case WHITE :
-			updateOutput(off);
-			bulbState = OFF;
-			break;
-
-		default :
-			updateOutput(on);
-			bulbState = ON;
-			break;
+// 		default :
+// 			output[16] = 0;
+// 			output[24] = 1;
+// 			bulbState = ON;
+// 			break;
 		
-	}
-}
+// 	}
+// }
 
 void sendIRData(){    
-	// if(bulbState == OFF){
-	// 	output[16] = 0;
-	// 	output[24] = 1;
-	// 	bulbState = ON;
-	// }
-	// else{
-	// 	output[16] = 1;
-	// 	output[24] = 0;
-	// 	bulbState = OFF;
-	// }
+	if(bulbState == OFF){
+		output[16] = 0;
+		output[24] = 1;
+		bulbState = ON;
+	}
+	else{
+		output[16] = 1;
+		output[24] = 0;
+		bulbState = OFF;
+	}
 	//P1OUT ^= BIT6;
-	setOutput();
+	//setOutput();
     int i;
     //Send a leader code for 9ms followed by 4.5 ms pause
 	    P1SEL |= IROUT; // connect output bit to timer
